@@ -12,9 +12,11 @@
 
 
 Nejprve nainstalujeme lxd
+
 `sudo snap install lxd`
 
 Poté inicializujeme
+
 `sudo lxd init`
 
 
@@ -75,9 +77,11 @@ Vygenerujeme join tokeny pro přidání zbývajících serverů do klastru
 ### jahodvik-02
 
 Nejprve nainstalujeme lxd
+
 `sudo snap install lxd`
 
 Poté inicializujeme
+
 `sudo lxd init`
 
 Nezapomeneme vložit dany token 
@@ -109,9 +113,11 @@ Would you like a YAML "lxd init" preseed to be printed? (yes/no) [default=no]:
 ### jahodvik-03
 
 Nejprve nainstalujeme lxd
+
 `sudo snap install lxd`
 
 Poté inicializujeme
+
 `sudo lxd init`
 
 Nezapomeneme vlozit dany token 
@@ -146,6 +152,7 @@ Po zadání příkazu `lxc cluster list` bychom měli vidět klastr který ma t�
 ### jahodvik-01
 
 Nastavíme helso pro ověřování
+
 `lxc config set core.trust_password <heslo>`
 
 ### lokální pc připojen na vpn s ssh přístupem na jahodvik-01
@@ -163,6 +170,7 @@ Vytvoříme novou instanci na nodu jahodvik-01
 `lxc init ubuntu:20.04 metrics --target jahodvik-01`
 
 Povolíme API
+
 `lxc config set core.metrics_address ":8444"`
 
 `mkdir /home/jahodvik/tls`
@@ -170,11 +178,13 @@ Povolíme API
 `cd /home/jahodvik/tls`
 
 Přihlásíme se do metrics instance buď příkazem níže nebo přes webovou konzoli v gui
+
 `lxc exec metrics bash`
 
 ### metrics
 
 Nainstalujeme Prometheus
+
 `snap install prometheus`
 
 `mkdir /var/snap/prometheus/current/tls`
@@ -188,28 +198,34 @@ Vygenerujeme certifikát
 ### jahodvik-01
 
 Certifikát zkopírujeme na jahodvik-01
+
 `lxc file pull metrics/var/snap/prometheus/current/tls/metrics.crt`
 
 Přidáme certifikát jako důvěryhodný
+
 `lxc config trust add metrics.crt --type=metrics`
 
 Lokalní certifikát zkopírujeme na metrics instanci
+
 `lxc file push /var/snap/lxd/common/lxd/server.crt metrics/var/snap/prometheus/current/tls/`
 
 ### jahodvik-02
 
 Povolíme API
+
 `lxc config set core.metrics_address ":8444"`
 
 ### jahodvik-03
 
 
 Povolíme API
+
 `lxc config set core.metrics_address ":8444"`
 
 ### metrics
 
 Do souboru vložíme tuto konfiguraci, nezapomeneme změnit ip adresy v targets
+
 `vi /var/snap/prometheus/current/prometheus.yml`
 
 ```
@@ -264,6 +280,7 @@ scrape_configs:
 ```
 
 A restartujeme Prometheus
+
 `snap restart prometheus`
 
 ### jahodvik-01
@@ -279,11 +296,13 @@ Nastavíme port forwarding, abychom se dostali na instance i z pc
 Na adrese http://<jahodvik-01>:32456 bychom měli mít zprovozněný Prometheus
 
 Nastavíme export logů (funguje od verze lxd 5.6)
+
 `lxc config set loki.api.url=http://<ip metrics inatance>:3100`
 
 ### metrics
 
 Nainstalujeme Grafanu a Loki
+
 `sudo apt-get install -y apt-transport-https software-properties-common wget`
 
 `sudo mkdir -p /etc/apt/keyrings/`
@@ -336,16 +355,19 @@ A máme dashboard!
 ## Nginx
 
 Vytvoříme novou instanci
+
 `lxc init ubuntu:20.04 web --target jahodvik-02`
 
 ### web
 
 Nainstalujeme Nginx
+
 `sudo apt install nginx`
 
 ### jahodvik-02
 
 Nastavíme port forwarding
+
 `lxc network forward create lxdfan0 <ip jahodvik-02> `
 
 `lxc network forward port add lxdfan0 <ip jahodvik-02> tcp 32455 <ip web insatance> 80`
@@ -353,11 +375,13 @@ Nastavíme port forwarding
 
 ## Docker dashboard
 Vytvoříme novou instanci
+
 `lxc init ubuntu:20.04 docker-homepage --target jahodvik-03`
 
 ### jahodvik-03
 
 Vytvoříme nový storage pool a volume pro Docker, docker nefunguje správně pod zfs, proto je nutné zvolit btrfs.
+
 `lxc storage create docker btrfs --target jahodvik-03`
 
 `lxc storage volume create docker docker-homepage`
@@ -365,11 +389,13 @@ Vytvoříme nový storage pool a volume pro Docker, docker nefunguje správně p
 `lxc config device add docker-homepage docker disk pool=docker source=docker-homepage path=/var/lib/docker`
 
 Další nutná nastavení a restart instance
+
 `lxc config set docker-homepage security.nesting=true security.syscalls.intercept.setxattr=true security.syscalls.intercept.mknod=true`
 
 `lxc restart docker-homepage`
 
 Nastavíme port forwarding pro instanci
+
 `lxc network forward create lxdfan0 <ip jahodvik-02> `
 
 `lxc network forward port add lxdfan0 <ip jahodvik-02> tcp 32458 <ip docker-homepage insatance> 8080`
@@ -378,15 +404,19 @@ Nastavíme port forwarding pro instanci
 ### docker-homepage
 
 Nainstalujeme Docker
+
 `snap install docker`
 
 Spustíme kontejner s webovou aplikací
+
 `docker run -d -p 8080:8080 --restart=always b4bz/homer:latest`
 
 Pro konfiguraci aplikace se musíme přihlásit do kontejneru
+
 `docker exec -it <container id> sh`
 
 Zkopírujeme konfiguraci níže, nezapomeneme změnit ip adresy
+
 `vi /www/assets/config.yml`
 
 ```
