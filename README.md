@@ -2,14 +2,19 @@
 
 
 
-## Instalace lxd
 
-`sudo snap install lxd`
+
+
 
 ## Sestavení klastru
 
 ### jahodvik-01
 
+
+Nejprve nainstalujeme lxd
+`sudo snap install lxd`
+
+Poté inicializujeme
 `sudo lxd init`
 
 
@@ -48,16 +53,16 @@ Would you like a YAML "lxd init" preseed to be printed? (yes/no) [default=no]:
 
 ```
 
-Povoleni web gui
+Povolíme web gui následujícími přikazy
 
 `snap set lxd ui.enable=true`
 `snap restart --reload lxd`
 `lxc config set core.https_address :8443`
 
-Postupujte podle pokynů na adrese https://<jahodvik-01 ip>:8443, které vás provedou procesem ověřování.
+Dále postupujte podle pokynů na adrese https://<jahodvik-01 ip>:8443, které vás provedou procesem ověřování.
 
 
-Generovani join tokenu pro pridani dalsich serveru do klastru
+Vygenerujeme join tokeny pro přidání zbývajících serverů do klastru
 
 
 `lxc cluster add jahodvik-02`
@@ -66,9 +71,13 @@ Generovani join tokenu pro pridani dalsich serveru do klastru
 
 ### jahodvik-02
 
+Nejprve nainstalujeme lxd
+`sudo snap install lxd`
+
+Poté inicializujeme
 `sudo lxd init`
 
-Nezapomeneme vlozit dany token 
+Nezapomeneme vložit dany token 
 
 ```
 uld you like to use LXD clustering? (yes/no) [default=no]: yes
@@ -96,6 +105,10 @@ Would you like a YAML "lxd init" preseed to be printed? (yes/no) [default=no]:
 
 ### jahodvik-03
 
+Nejprve nainstalujeme lxd
+`sudo snap install lxd`
+
+Poté inicializujeme
 `sudo lxd init`
 
 Nezapomeneme vlozit dany token 
@@ -123,86 +136,80 @@ Would you like a YAML "lxd init" preseed to be printed? (yes/no) [default=no]:
 
 ```
 
-Po zadani prikau  ize bychom meli videt klastr ketry ma tri nody
+Po zadání příkazu `lxc cluster list` bychom měli vidět klastr který ma tři nody
 
-`lxc cluster list`
-
-## Pristup na klastr pres lokalni stroj
+## Přístup na klastr přes lokální stroj
 
 ### jahodvik-01
 
+Nastavíme helso pro ověřování
 `lxc config set core.trust_password <heslo>`
 
-### lokalni pc pripojen na vpn s ssh pristupem na jahodvvik-01
+### lokální pc připojen na vpn s ssh přístupem na jahodvik-01
 
 `sudo snap install lxd`
 
-Povolime fingerprint a zadame heslo ktere jseme nastavili v predchozim kroku
+Povolíme fingerprint a zádame heslo, které jseme nastavili v předchozím kroku
 
 `lxc remote add rpi <ip jahodvik-01>`
 
 ## Monitoring metrik
 
-Vytvorime novou instanci na nodu jahodvik-01
+Vytvoříme novou instanci na nodu jahodvik-01
 
 `lxc init ubuntu:20.04 metrics --target jahodvik-01`
 
-Povoleni API
-
+Povolíme API
 `lxc config set core.metrics_address ":8444"`
 
 `mkdir /home/jahodvik/tls`
+
 `cd /home/jahodvik/tls`
 
-
-
-
-
-Prihlasime se do metrics instance bud prikazem nize nebo pres webovou konzoli v gui
-
+Přihlásíme se do metrics instance buď příkazem níže nebo přes webovou konzoli v gui
 `lxc exec metrics bash`
 
 ### metrics
 
+Nainstalujeme Prometheus
 `snap install prometheus`
 
 `mkdir /var/snap/prometheus/current/tls`
 
 `cd /var/snap/prometheus/current/tls`
 
-Generovani certifikatu
+Vygenerujeme certifikát
 
 `openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -sha384 -keyout metrics.key -nodes -out metrics.crt -days 3650 -subj "/CN=metrics.local"`
 
 ### jahodvik-01
 
+Certifikát zkopírujeme na jahodvik-01
 `lxc file pull metrics/var/snap/prometheus/current/tls/metrics.crt`
 
-Pridani certifikatu jako duveryhodny
-
+Přidáme certifikát jako důvěryhodný
 `lxc config trust add metrics.crt --type=metrics`
 
-
+Lokalní certifikát zkopírujeme na metrics instanci
 `lxc file push /var/snap/lxd/common/lxd/server.crt metrics/var/snap/prometheus/current/tls/`
-
 
 ### jahodvik-02
 
-
+Povolíme API
 `lxc config set core.metrics_address ":8444"`
+
 ### jahodvik-03
 
 
-
+Povolíme API
 `lxc config set core.metrics_address ":8444"`
 
 ### metrics
 
-do souboru vlozte tuto konfiguraci, nezapomente zmenit ip adresy v targets
+Do souboru vložíme tuto konfiguraci, nezapomeneme změnit ip adresy v targets
 `vi /var/snap/prometheus/current/prometheus.yml`
 
 ```
-
 
 # my global config
 global:
@@ -251,17 +258,14 @@ scrape_configs:
       #      is not covered by the certificate (not in the SAN list)
       server_name: 'jahodvik-cluster' 
 
-
-
 ```
 
-
+A restartujeme Prometheus
 `snap restart prometheus`
-
 
 ### jahodvik-01
 
-Nasteveni port forwarding
+Nastavíme port forwarding, abychom se dostali na instance i z pc
 
 `lxc network forward create lxdfan0 <ip jahodvik-01> `
 
@@ -269,10 +273,14 @@ Nasteveni port forwarding
 
 `lxc network forward port add lxdfan0 <ip jahodvik-01> tcp 32457 <ip metrics inatance> 3000`
 
-Na adrese http://<jahodvik-01>:32456 bychom meli mit prometheus
+Na adrese http://<jahodvik-01>:32456 bychom měli mít zprovozněný Prometheus
+
+Nastavíme export logů (funguje od verze lxd 5.6)
+`lxc config set loki.api.url=http://<ip metrics inatance>:3100`
 
 ### metrics
 
+Nainstalujeme Grafanu a Loki
 `sudo apt-get install -y apt-transport-https software-properties-common wget`
 
 `sudo mkdir -p /etc/apt/keyrings/`
@@ -286,89 +294,86 @@ Na adrese http://<jahodvik-01>:32456 bychom meli mit prometheus
 `sudo /bin/systemctl start grafana-server`
 
 
-Na http://<jahodvik-01>:32457 mame grafanu
+Jelikož jsme nastavili forwarding i pro Grafanu v předchozím kroku, na http://<jahodvik-01>:32457 ji máme zprovozněnou.
 
-Nejprve si pripravime datasource z loki
+Přihlásíme se pomocí admin admin.
+Nejprve si připravíme datasource z Loki
 
-Click Connections in the left-side menu.
-Under Connections, click Add new connection.
-Enter Loki in the search bar.
-Select Loki data source.
-Click Create a Loki data source in the upper right.
-
-v poli url zadejte localhost:3100
-
-
-To stejne pro prometheus
-
-Click Connections in the left-side menu.
-Under Connections, click Add new connection.
-Enter Prometheus in the search bar.
-Select Prometheus data source.
-Click Create a Prometheus data source in the upper right.
-
-v poli url zadejte localhost:9090
+1. Klikňěte na Connections v levém side menu.
+2. Pod Connections, klikňěte na Add new connection.
+3. Zadejte Loki ve vyhledávacím okně.
+4. Vyberte Loki data source.
+5. Klikňěte Create a Loki data source vpravo nahoře.
+6. V poli url zadejte localhost:3100
 
 
-Navigate to the data source’s configuration page.
-Select the Dashboards tab.
-This displays dashboards for Grafana and Prometheus.
+To stejné pro Prometheus
 
-Select Import for the dashboard to import.
+1. Klikňěte na Connections v levém side menu.
+2. Pod Connections, klikňěte na Add new connection.
+3. Zadejte Prometheus ve vyhledávacím okně.
+4. Vyberte Prometheus data source.
+5. Klikňěte Create a Prometheus data source vpravo nahoře.
+6. V poli url zadejte localhost:9090
 
-do grafana ID vlozte 19131 a stisknete load
 
-A mame dashboard
+1. Navigate to the data source’s configuration page.
+2. Vyberte záložku Dashboards.
+3. Klikňěte na Import.
+4. Do grafana ID vložte 19131 a klikňěte na tlačítko load
 
+A máme dashboard!
 
 ## Nginx
 
+Vytvoříme novou instanci
 `lxc init ubuntu:20.04 web --target jahodvik-02`
 
 ### web
 
+Nainstalujeme Nginx
 `sudo apt install nginx`
 
 ### jahodvik-02
 
+Nastavíme port forwarding
 `lxc network forward create lxdfan0 <ip jahodvik-02> `
-
 `lxc network forward port add lxdfan0 <ip jahodvik-02> tcp 32455 <ip web insatance> 80`
 
 
 ## Docker dashboard
-
+Vytvoříme novou instanci
 `lxc init ubuntu:20.04 docker-homepage --target jahodvik-03`
 
 ### jahodvik-03
 
-
+Vytvoříme nový storage pool a volume pro Docker, docker nefunguje správně pod zfs, proto je nutné zvolit btrfs.
 `lxc storage create docker btrfs --target jahodvik-03`
 `lxc storage volume create docker docker-homepage`
 `lxc config device add docker-homepage docker disk pool=docker source=docker-homepage path=/var/lib/docker`
 
-
+Další nutná nastavení a restart instance
 `lxc config set docker-homepage security.nesting=true security.syscalls.intercept.setxattr=true security.syscalls.intercept.mknod=true`
- `lxc restart docker-homepage`
+`lxc restart docker-homepage`
 
-
+Nastavíme port forwarding pro instanci
 `lxc network forward create lxdfan0 <ip jahodvik-02> `
-
 `lxc network forward port add lxdfan0 <ip jahodvik-02> tcp 32458 <ip docker-homepage insatance> 8080`
 
 
 ### docker-homepage
 
+Nainstalujeme Docker
 `snap install docker`
 
+Spustíme kontejner s webovou aplikací
 `docker run -d -p 8080:8080 --restart=always b4bz/homer:latest`
 
+Pro konfiguraci aplikace se musíme přihlásit do kontejneru
 `docker exec -it <container id> sh`
 
-Zkopirujte konfiguraci pozmente ip adresy
-
+Zkopírujeme konfiguraci níže, nezapomeneme změnit ip adresy
 `vi /www/assets/config.yml`
-
 
 ```
 ---
