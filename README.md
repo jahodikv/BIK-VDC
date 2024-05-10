@@ -56,7 +56,9 @@ Would you like a YAML "lxd init" preseed to be printed? (yes/no) [default=no]:
 Povolíme web gui následujícími přikazy
 
 `snap set lxd ui.enable=true`
+
 `snap restart --reload lxd`
+
 `lxc config set core.https_address :8443`
 
 Dále postupujte podle pokynů na adrese https://<jahodvik-01 ip>:8443, které vás provedou procesem ověřování.
@@ -66,6 +68,7 @@ Vygenerujeme join tokeny pro přidání zbývajících serverů do klastru
 
 
 `lxc cluster add jahodvik-02`
+
 `lxc cluster add jahodvik-03`
 
 
@@ -284,13 +287,19 @@ Nainstalujeme Grafanu a Loki
 `sudo apt-get install -y apt-transport-https software-properties-common wget`
 
 `sudo mkdir -p /etc/apt/keyrings/`
+
 `wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | sudo tee /etc/apt/keyrings/grafana.gpg > /dev/null`
 
 `echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list`
+
 `sudo apt-get update`
+
 `sudo apt-get install grafana loki`
+
 `sudo /bin/systemctl daemon-reload`
+
 `sudo /bin/systemctl enable grafana-server`
+
 `sudo /bin/systemctl start grafana-server`
 
 
@@ -338,6 +347,7 @@ Nainstalujeme Nginx
 
 Nastavíme port forwarding
 `lxc network forward create lxdfan0 <ip jahodvik-02> `
+
 `lxc network forward port add lxdfan0 <ip jahodvik-02> tcp 32455 <ip web insatance> 80`
 
 
@@ -349,15 +359,19 @@ Vytvoříme novou instanci
 
 Vytvoříme nový storage pool a volume pro Docker, docker nefunguje správně pod zfs, proto je nutné zvolit btrfs.
 `lxc storage create docker btrfs --target jahodvik-03`
+
 `lxc storage volume create docker docker-homepage`
+
 `lxc config device add docker-homepage docker disk pool=docker source=docker-homepage path=/var/lib/docker`
 
 Další nutná nastavení a restart instance
 `lxc config set docker-homepage security.nesting=true security.syscalls.intercept.setxattr=true security.syscalls.intercept.mknod=true`
+
 `lxc restart docker-homepage`
 
 Nastavíme port forwarding pro instanci
 `lxc network forward create lxdfan0 <ip jahodvik-02> `
+
 `lxc network forward port add lxdfan0 <ip jahodvik-02> tcp 32458 <ip docker-homepage insatance> 8080`
 
 
