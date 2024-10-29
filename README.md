@@ -1,8 +1,8 @@
 # BIK-VDC
 
+Cílem předmětu je představit technologické základy cloudových systémů. Předmět ukazuje techniky a principy, které se používají při návrhu a realizaci infrastruktury datových center, jako jsou různé typy virtualizace a uplatnění vysoké dostupnosti pro servery, datová úložiště i softwarové vrstvy. Předmět systematicky vede technologiemi datových center od privátních až po veřejné a hybridní cloudy. Student se seznámí se současnými trendy v architektuře IT infrastruktury a naučí se je konfigurovat pro klasické i cloudové aplikace. Po absolvování předmětu bude schopen navrhovat, ověřovat a provozovat komplexní infrastrukturu pro moderní aplikace s ohledem na jejich škálovatelnost, zabezpečení proti přetížení, výpadkům a ztrátám dat.
 
-
-
+**Finální známka: A**
 
 
 
